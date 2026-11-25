@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>SiriGemini15</string>
+			<key>footerText</key>
+			<string>Siriに話した言葉を Google Gemini（無料枠）に送って、答えを読み上げるtweakです。これは段階0の骨組み（0.1.0）です。今入っているのは、設定画面とログと失敗ブレーキと、Geminiへの「APIテスト」だけです。まだ Siri の言葉の横取りはしません（次の段階で1つずつ足します）。光る Siri の見た目は、別の無料 tweak「LiquidSiri」が担当します。この tweak は Siri の見た目には触らないので、ぶつかりません。アンインストールすれば完全に元に戻ります。</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>key</key>
+			<string>Enabled</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.tori.sirigemini15</string>
+			<key>label</key>
+			<string>有効にする（全体のスイッチ）</string>
+			<key>PostNotification</key>
+			<string>com.tori.sirigemini15.changed</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Gemini APIキー</string>
+			<key>footerText</key>
+			<string>Google AI Studio で無料で取れる APIキー を入れてください（Googleアカウントだけで取れます。カード登録は要りません）。キーはこの iPhone の中にだけ保存され、私にもサーバーにも送られません。無料枠では、送った内容が Google の学習に使われることがあります。人に知られたくない個人的なことは話さないでください。</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSEditTextCell</string>
+			<key>key</key>
+			<string>APIKey</string>
+			<key>default</key>
+			<string></string>
+			<key>defaults</key>
+			<string>com.tori.sirigemini15</string>
+			<key>label</key>
+			<string>APIキー</string>
+			<key>placeholder</key>
+			<string>ここにAPIキーを貼る</string>
+			<key>PostNotification</key>
+			<string>com.tori.sirigemini15.changed</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>モデル</string>
+			<key>footerText</key>
+			<string>モデルは下の2つのボタンで決めます。「（今これ）」が付いているのが今のモデルです。一覧画面を開く方式は、この iPhone では設定アプリが落ちてしまったことがあるので、ボタン方式にしています。</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>id</key>
+			<string>model_flashlite</string>
+			<key>label</key>
+			<string>Flash-Lite（速い・無料枠が広い）（今これ）</string>
+			<key>action</key>
+			<string>setModelFlashLite:</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>id</key>
+			<string>model_flash</string>
+			<key>label</key>
+			<string>Flash（少し賢い）</string>
+			<key>action</key>
+			<string>setModelFlash:</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>APIテスト</string>
+			<key>footerText</key>
+			<string>「接続テストです。短く挨拶して」という決まった文を Gemini に送って、返事を読み上げます。キーとネットと無料枠が使えるかの確認用です。</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>label</key>
+			<string>APIテスト（挨拶を送って読み上げ）</string>
+			<key>action</key>
+			<string>testAPI:</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>label</key>
+			<string>読み上げを止める</string>
+			<key>action</key>
+			<string>stopTTS:</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>ログ</string>
+			<key>footerText</key>
+			<string>動作ログは /var/mobile/Library/Logs/SiriGemini15.log に残ります。Filza などで開けます。うまく動かない時は、このファイルを私に送ってください。中の記録（A_DYLIB_LOADED / PREFS_READ / SIRI_UI_SEEN / GEMINI_OK / GEMINI_FAIL / TTS_DONE）で原因を特定できます。</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>label</key>
+			<string>ログを消す</string>
+			<key>action</key>
+			<string>clearLog:</string>
+		</dict>
+	</array>
+	<key>title</key>
+	<string>SiriGemini15</string>
+</dict>
+</plist>
