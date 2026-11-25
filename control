@@ -1,0 +1,9 @@
+Package: com.tori.sirigemini15
+Name: SiriGemini15
+Version: 0.1.0
+Architecture: iphoneos-arm64
+Description: SiriGemini15 0.1.0 (stage 0, skeleton): turns Siri into an AI assistant on iPhone 7 / iOS 15 (Dopamine, rootless). The plan: words spoken to Siri are intercepted and sent to the Google Gemini API (free tier), and the answer is read aloud. The glowing iOS 27-style Siri look is handled by the separate free tweak LiquidSiri; this tweak never touches Siri's UI classes or drawing, so the two do not fight. This skeleton contains only the Settings pane (master switch, Gemini API key field, model choice via plain PSButtonCell rows — the list-controller style crashed Settings on this device in VoiceChat15, so it is not used), an "API test" button that sends a fixed greeting prompt to Gemini with the entered key and reads the reply aloud (AVSpeechSynthesizer, ja-JP), a stop-speaking button, the diagnostic log at /var/mobile/Library/Logs/SiriGemini15.log (stage marks A_DYLIB_LOADED / PREFS_READ / SIRI_UI_SEEN / GEMINI_OK / GEMINI_FAIL / TTS_DONE), a passive witness hook that only records when Siri's UI appears, and the failure brake (5 exceptions stop all activity until respring). It does NOT intercept spoken words yet; that arrives at stage 1, after the skeleton passes on the real device.
+Maintainer: Tori
+Author: Tori
+Section: Tweaks
+Depends: ellekit (>= 1.0.0), preferenceloader
