@@ -1,0 +1,152 @@
+name: Build SiriGemini15
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Unpack project zip if needed
+        run: |
+          if [ ! -f Makefile ]; then
+            for z in *.zip; do unzip -o "$z"; done
+          fi
+          if [ -d SiriGemini15 ] && [ -f SiriGemini15/Makefile ]; then
+            cp -R SiriGemini15/. .
+          fi
+          ls -la
+          test -f Makefile
+          test -f SiriGemini15.plist
+          find . -type d -exec chmod 755 {} +
+          find . -type f -exec chmod 644 {} +
+          chmod 644 SiriGemini15.plist prefs/entry.plist prefs/Resources/Root.plist
+          ls -l SiriGemini15.plist prefs/entry.plist prefs/Resources/Root.plist
+
+      - name: Install build tools (ldid, dpkg)
+        run: |
+          brew install ldid dpkg || brew install ldid dpkg
+          which ldid
+          which dpkg-deb || true
+
+      - name: Install Theos
+        run: |
+          export THEOS="$HOME/theos"
+          echo "THEOS=$THEOS" >> "$GITHUB_ENV"
+          git clone --recursive https://github.com/theos/theos.git "$THEOS"
+          rm -rf "$THEOS/sdks"
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/theos/sdks.git "$THEOS/sdks"
+          git -C "$THEOS/sdks" sparse-checkout set iPhoneOS16.5.sdk
+          ls "$THEOS/sdks"
+          xcodebuild -version
+
+      - name: Build package (rootless, arm64)
+        run: |
+          set -o pipefail
+          make clean
+          make package FINALPACKAGE=1 2>&1 | tee build.log
+          ls -lh packages/
+
+      - name: Inspect Debian package
+        run: |
+          set -e
+          DEB="$(ls packages/*.deb | head -n 1)"
+          echo "DEB=$DEB"
+          {
+            echo "=== Package file ==="
+            echo "$DEB"
+            echo
+            echo "=== Control metadata (dpkg-deb -f) ==="
+            dpkg-deb -f "$DEB"
+            echo
+            echo "=== Contents (dpkg-deb -c) ==="
+            dpkg-deb -c "$DEB"
+            echo
+            echo "=== Required files check ==="
+            dpkg-deb -c "$DEB" | grep -E "SiriGemini15\.dylib" || { echo "MISSING: SiriGemini15.dylib"; exit 1; }
+            dpkg-deb -c "$DEB" | grep -E "SiriGemini15\.plist" || { echo "MISSING: SiriGemini15.plist"; exit 1; }
+            dpkg-deb -c "$DEB" | grep -E "SiriGemini15Prefs" || { echo "MISSING: SiriGemini15Prefs bundle"; exit 1; }
+            echo "dylib, plist and prefs bundle are present."
+            echo
+            echo "=== All-plists permission check (every plist must be 644) ==="
+            BAD_PLISTS="$(dpkg-deb -c "$DEB" | grep -E "\.plist$" | grep -v "^-rw-r--r--" || true)"
+            if [ -n "$BAD_PLISTS" ]; then
+              echo "Plist permission NG: not 644:"
+              echo "$BAD_PLISTS"
+              exit 1
+            fi
+            echo "All plists permission OK: 644"
+            echo
+            echo "=== Prefs bundle dir permission check (must be 755) ==="
+            dpkg-deb -c "$DEB" | grep -E "PreferenceBundles/SiriGemini15Prefs\.bundle$" | grep -q "^drwxr-xr-x" \
+              && echo "Bundle dir permission OK: 755" || { echo "Bundle dir permission NG: not 755"; exit 1; }
+            echo
+            echo "=== Extract and inspect ==="
+            rm -rf pkg_inspect && mkdir -p pkg_inspect
+            dpkg-deb -x "$DEB" pkg_inspect
+            find pkg_inspect -type f | sort
+            echo
+            echo "=== Filter plist contents ==="
+            PLIST_PATH="$(find pkg_inspect -name 'SiriGemini15.plist' | head -n 1)"
+            echo "Plist path in package: $PLIST_PATH"
+            cat "$PLIST_PATH"
+            grep -q "com.apple.springboard" "$PLIST_PATH" && echo "Filter target OK: com.apple.springboard"
+            echo
+            echo "=== Dylib architecture (must contain arm64) ==="
+            DYLIB_PATH="$(find pkg_inspect -name 'SiriGemini15.dylib' | head -n 1)"
+            echo "Dylib path in package: $DYLIB_PATH"
+            file "$DYLIB_PATH"
+            (lipo -info "$DYLIB_PATH" || true)
+            file "$DYLIB_PATH" | grep -q "arm64" || { echo "Dylib architecture NG: not arm64"; exit 1; }
+            echo "Dylib architecture OK: arm64"
+            echo
+            echo "=== Dylib linked libraries (otool -L) ==="
+            (otool -L "$DYLIB_PATH" || true)
+            echo
+            echo "=== Prefs bundle architecture ==="
+            PREFS_PATH="$(find pkg_inspect -name 'SiriGemini15Prefs' -type f | head -n 1)"
+            echo "Prefs binary path: $PREFS_PATH"
+            file "$PREFS_PATH"
+            (lipo -info "$PREFS_PATH" || true)
+            echo
+            echo "=== Rootless path check ==="
+            find pkg_inspect -type f | grep -q "var/jb/Library/MobileSubstrate/DynamicLibraries/SiriGemini15.dylib" \
+              && echo "Rootless dylib path OK" || { echo "Rootless dylib path NG"; exit 1; }
+            find pkg_inspect -type f | grep -q "var/jb/Library/MobileSubstrate/DynamicLibraries/SiriGemini15.plist" \
+              && echo "Rootless plist path OK" || { echo "Rootless plist path NG"; exit 1; }
+          } 2>&1 | tee inspection_report.txt
+          cp "$DEB" SiriGemini15_Dopamine_Rootless.deb
+
+      - name: Prepare source ZIP
+        run: |
+          rm -rf source_zip && mkdir -p source_zip/SiriGemini15
+          cp -R Makefile control Tweak.x SGManager.h SGManager.m SGGemini.h SGGemini.m SiriGemini15.plist DESIGN.md README_JP.md prefs .github source_zip/SiriGemini15/
+          (cd source_zip && zip -r ../SiriGemini15_Source.zip SiriGemini15)
+          ls -lh SiriGemini15_Source.zip SiriGemini15_Dopamine_Rootless.deb build.log inspection_report.txt
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIRIGEMINI15-0.1.0-rootless
+          path: |
+            SiriGemini15_Dopamine_Rootless.deb
+            SiriGemini15_Source.zip
+            build.log
+            inspection_report.txt
+          if-no-files-found: error
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sirigemini15-build-log-failure
+          path: |
+            build.log
+            inspection_report.txt
+          if-no-files-found: ignore
